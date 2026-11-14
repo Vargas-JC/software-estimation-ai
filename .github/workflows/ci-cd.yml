@@ -2,9 +2,9 @@ name: InScope AI CI/CD
 
 on:
   push:
-    branches: [master, develop]
+    branches: [master]
   pull_request:
-    branches: [master, develop]
+    branches: [master]
 
 permissions:
   contents: read
@@ -63,3 +63,28 @@ jobs:
             ghcr.io/${{ github.repository }}:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  deploy:
+    needs: docker-build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy container to Ubuntu VM via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            docker network create inscope-net || true
+            docker pull ghcr.io/${{ github.repository }}:latest
+            docker stop inscope-ai || true
+            docker rm inscope-ai || true
+            docker run -d \
+              --name inscope-ai \
+              --restart unless-stopped \
+              --network inscope-net \
+              -p 127.0.0.1:8000:8000 \
+              ghcr.io/${{ github.repository }}:latest
+            docker image prune -f
