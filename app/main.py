@@ -1,6 +1,8 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
+import uvicorn
 
+from app.config import HOST, PORT
 from app.ml.predictor import RiskPredictor
 from app.schemas import (
     AllocationOptimizeRequest,
@@ -58,4 +60,8 @@ def optimize_allocation(request: AllocationOptimizeRequest) -> AllocationOptimiz
 @app.get("/api/v1/models/metrics")
 def get_model_metrics() -> dict:
     return predictor.get_metrics()
+
+
+if __name__ == "__main__":
+    uvicorn.run("app.main:app", host=HOST, port=PORT)
 
