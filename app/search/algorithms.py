@@ -4,13 +4,14 @@ import heapq
 import random
 import time
 
-from app.schemas import SearchAlgorithm, TaskAssignment
-from app.search.problem import AllocationProblem, AllocationState
+from app.core.exceptions import UnprocessableEntityException
+from app.schemas import SearchAlgorithm, TaskAssignmentResponse
+from app.search.problem import AssignmentProblem, AssignmentState
 
 
 @dataclass
 class SearchResult:
-    assignments: list[TaskAssignment]
+    assignments: list[TaskAssignmentResponse]
     total_cost: float
     nodes_explored: int
     execution_time_ms: float
@@ -18,14 +19,14 @@ class SearchResult:
 
 
 def _build_assignments(
-    problem: AllocationProblem, assignment_indices: tuple[int, ...] | list[int]
-) -> list[TaskAssignment]:
-    result: list[TaskAssignment] = []
+    problem: AssignmentProblem, assignment_indices: tuple[int, ...] | list[int]
+) -> list[TaskAssignmentResponse]:
+    result: list[TaskAssignmentResponse] = []
     for task, profile_idx in zip(problem.tasks, assignment_indices):
         profile = problem.profiles[profile_idx]
         cost = round(task.estimate_hours * profile.hourly_rate, 2)
         result.append(
-            TaskAssignment(
+            TaskAssignmentResponse(
                 task_id=task.id,
                 task_title=task.title,
                 profile_id=profile.id,
@@ -38,11 +39,11 @@ def _build_assignments(
     return result
 
 
-def astar_search(problem: AllocationProblem) -> SearchResult:
+def astar_search(problem: AssignmentProblem) -> SearchResult:
     start_time = time.perf_counter()
     start_state = problem.initial_state()
     counter = 0
-    frontier: list[tuple[float, int, AllocationState]] = [
+    frontier: list[tuple[float, int, AssignmentState]] = [
         (problem.heuristic(start_state), counter, start_state)
     ]
     nodes_explored = 0
@@ -67,10 +68,12 @@ def astar_search(problem: AllocationProblem) -> SearchResult:
             f_score = nxt.accumulated_cost + problem.heuristic(nxt)
             heapq.heappush(frontier, (f_score, counter, nxt))
 
-    raise ValueError("No se encontro una asignacion factible con las restricciones dadas.")
+    raise UnprocessableEntityException(
+        "No se encontro una asignacion factible con las restricciones dadas."
+    )
 
 
-def bfs_search(problem: AllocationProblem) -> SearchResult:
+def bfs_search(problem: AssignmentProblem) -> SearchResult:
     start_time = time.perf_counter()
     queue = deque([problem.initial_state()])
     nodes_explored = 0
@@ -92,10 +95,12 @@ def bfs_search(problem: AllocationProblem) -> SearchResult:
         for action in problem.actions(current):
             queue.append(problem.transition(current, action))
 
-    raise ValueError("No se encontro una asignacion factible con las restricciones dadas.")
+    raise UnprocessableEntityException(
+        "No se encontro una asignacion factible con las restricciones dadas."
+    )
 
 
-def dfs_search(problem: AllocationProblem) -> SearchResult:
+def dfs_search(problem: AssignmentProblem) -> SearchResult:
     start_time = time.perf_counter()
     stack = [problem.initial_state()]
     nodes_explored = 0
@@ -117,10 +122,12 @@ def dfs_search(problem: AllocationProblem) -> SearchResult:
         for action in reversed(problem.actions(current)):
             stack.append(problem.transition(current, action))
 
-    raise ValueError("No se encontro una asignacion factible con las restricciones dadas.")
+    raise UnprocessableEntityException(
+        "No se encontro una asignacion factible con las restricciones dadas."
+    )
 
 
-def _evaluate_cost(problem: AllocationProblem, assignment: list[int]) -> float | None:
+def _evaluate_cost(problem: AssignmentProblem, assignment: list[int]) -> float | None:
     profile_hours = [0.0] * len(problem.profiles)
     total_cost = 0.0
     for task, p_idx in zip(problem.tasks, assignment):
@@ -131,7 +138,7 @@ def _evaluate_cost(problem: AllocationProblem, assignment: list[int]) -> float |
     return total_cost
 
 
-def hill_climbing_search(problem: AllocationProblem, restarts: int = 5) -> SearchResult:
+def hill_climbing_search(problem: AssignmentProblem, restarts: int = 5) -> SearchResult:
     # Busqueda local con reinicios aleatorios para mitigar optimos locales.
     start_time = time.perf_counter()
     rng = random.Random(42)
@@ -189,7 +196,7 @@ def hill_climbing_search(problem: AllocationProblem, restarts: int = 5) -> Searc
     )
 
 
-def run_search(problem: AllocationProblem, algorithm: SearchAlgorithm) -> SearchResult:
+def run_search(problem: AssignmentProblem, algorithm: SearchAlgorithm) -> SearchResult:
     dispatch = {
         SearchAlgorithm.ASTAR: astar_search,
         SearchAlgorithm.HILL_CLIMBING: hill_climbing_search,
