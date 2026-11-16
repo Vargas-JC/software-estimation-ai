@@ -1,23 +1,23 @@
-from app.schemas import ExperienceLevel, ProfileInput, SearchAlgorithm, TaskInput, TechnicalRole
+from app.schemas import ExperienceLevel, ProfileRequest, SearchAlgorithm, TaskRequest, TechnicalRole
 from app.search.algorithms import run_search
-from app.search.problem import AllocationProblem
+from app.search.problem import AssignmentProblem
 
 
-def _sample_problem(max_hours: float | None = 12.0) -> AllocationProblem:
+def _sample_problem(max_hours: float | None = 12.0) -> AssignmentProblem:
     tasks = [
-        TaskInput(id="t1", title="API Auth", estimate_hours=8),
-        TaskInput(id="t2", title="Dashboard UI", estimate_hours=6),
-        TaskInput(id="t3", title="Unit Tests", estimate_hours=4),
+        TaskRequest(id="t1", title="API Auth", estimate_hours=8),
+        TaskRequest(id="t2", title="Dashboard UI", estimate_hours=6),
+        TaskRequest(id="t3", title="Unit Tests", estimate_hours=4),
     ]
     profiles = [
-        ProfileInput(
+        ProfileRequest(
             id="p1",
             name="Junior Dev",
             role=TechnicalRole.BACKEND,
             experience_level=ExperienceLevel.JUNIOR,
             hourly_rate=20.0,
         ),
-        ProfileInput(
+        ProfileRequest(
             id="p2",
             name="Senior Dev",
             role=TechnicalRole.FULLSTACK,
@@ -25,7 +25,7 @@ def _sample_problem(max_hours: float | None = 12.0) -> AllocationProblem:
             hourly_rate=50.0,
         ),
     ]
-    return AllocationProblem(tasks=tasks, profiles=profiles, max_hours_per_profile=max_hours)
+    return AssignmentProblem(tasks=tasks, profiles=profiles, max_hours_per_profile=max_hours)
 
 
 def test_astar_finds_minimum_cost():

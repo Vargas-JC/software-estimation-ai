@@ -1,24 +1,30 @@
-from app.main import get_model_metrics, health, optimize_allocation, predict_risk, predictor
+from app.api.v1.assignment import optimize_assignments
+from app.api.v1.health import health
+from app.api.v1.risk import get_model_metrics, predict_risk
 from app.schemas import (
-    AllocationOptimizeRequest,
+    AssignmentOptimizeRequest,
+    ClassificationModel,
     ExperienceLevel,
-    ProfileInput,
+    ProfileRequest,
+    ProjectType,
+    RegressionModel,
     RiskPredictionRequest,
     SearchAlgorithm,
-    TaskInput,
+    TaskRequest,
     TechnicalRole,
-    ProjectType,
 )
+from app.services import risk_service
 
 
 def test_health_and_metrics_and_predict():
-    predictor.load()
+    risk_service.load_models()
     h = health()
     assert h["models_loaded"] is True
 
     metrics = get_model_metrics()
     assert "regression_comparison" in metrics
-    assert "classification_logistic_regression" in metrics
+    assert "classification_comparison" in metrics
+    assert "selected_classification_model" in metrics
 
     pred = predict_risk(
         RiskPredictionRequest(
@@ -36,24 +42,26 @@ def test_health_and_metrics_and_predict():
     assert pred.recommended_contingency_margin > 0
     assert pred.predicted_risk_level.value in {"LOW", "MEDIUM", "HIGH", "CRITICAL"}
     assert abs(sum(pred.risk_probabilities.values()) - 1.0) < 0.01
+    assert isinstance(pred.regression_model_used, RegressionModel)
+    assert isinstance(pred.classification_model_used, ClassificationModel)
 
 
 def test_optimize_endpoint():
-    res = optimize_allocation(
-        AllocationOptimizeRequest(
+    res = optimize_assignments(
+        AssignmentOptimizeRequest(
             tasks=[
-                TaskInput(id="t1", title="Task 1", estimate_hours=6),
-                TaskInput(id="t2", title="Task 2", estimate_hours=4),
+                TaskRequest(id="t1", title="Task 1", estimate_hours=6),
+                TaskRequest(id="t2", title="Task 2", estimate_hours=4),
             ],
             profiles=[
-                ProfileInput(
+                ProfileRequest(
                     id="p1",
                     name="Dev A",
                     role=TechnicalRole.BACKEND,
                     experience_level=ExperienceLevel.MID,
                     hourly_rate=30.0,
                 ),
-                ProfileInput(
+                ProfileRequest(
                     id="p2",
                     name="Dev B",
                     role=TechnicalRole.FULLSTACK,
