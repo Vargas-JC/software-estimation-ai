@@ -1,0 +1,14 @@
+from enum import Enum
+
+
+class TechnicalRole(str, Enum):
+    FRONTEND = "FRONTEND"
+    BACKEND = "BACKEND"
+    FULLSTACK = "FULLSTACK"
+    QA = "QA"
+    DEVOPS = "DEVOPS"
+    UI_UX_DESIGNER = "UI_UX_DESIGNER"
+    PRODUCT_MANAGER = "PRODUCT_MANAGER"
+    TECH_LEAD = "TECH_LEAD"
+    FUNCTIONAL_ANALYST = "FUNCTIONAL_ANALYST"
+    OTHER = "OTHER"

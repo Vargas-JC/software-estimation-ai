@@ -1,0 +1,10 @@
+from enum import Enum
+
+
+class ClassificationModel(str, Enum):
+    LOGISTIC_REGRESSION = "LOGISTIC_REGRESSION"
+    SVM = "SVM"
+    KNN = "KNN"
+    DECISION_TREE = "DECISION_TREE"
+    RANDOM_FOREST = "RANDOM_FOREST"
+    GRADIENT_BOOSTING = "GRADIENT_BOOSTING"

@@ -1,0 +1,8 @@
+from enum import Enum
+
+
+class RegressionModel(str, Enum):
+    LINEAR_REGRESSION = "LINEAR_REGRESSION"
+    RIDGE = "RIDGE"
+    POLYNOMIAL_RIDGE = "POLYNOMIAL_RIDGE"
+    RANDOM_FOREST_REGRESSOR = "RANDOM_FOREST_REGRESSOR"
