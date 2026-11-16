@@ -1,19 +1,25 @@
 import json
 from pathlib import Path
+from typing import Any
 
 import joblib
 import pandas as pd
 
-from app.schemas import RiskLevel, RiskPredictionRequest, RiskPredictionResponse
-
-ARTIFACTS_DIR = Path(__file__).resolve().parents[2] / "artifacts"
+from app.core.config import ARTIFACTS_DIR
+from app.schemas import (
+    ClassificationModel,
+    RegressionModel,
+    RiskLevel,
+    RiskPredictionRequest,
+    RiskPredictionResponse,
+)
 
 
 class RiskPredictor:
     def __init__(self, artifacts_dir: Path = ARTIFACTS_DIR):
         self.artifacts_dir = artifacts_dir
-        self._regressor = None
-        self._classifier = None
+        self._regressor: Any = None
+        self._classifier: Any = None
         self._metrics: dict = {}
 
     def load(self) -> None:
@@ -66,6 +72,9 @@ class RiskPredictor:
             recommended_contingency_margin=round(max(0.0, margin), 2),
             predicted_risk_level=RiskLevel(predicted_label),
             risk_probabilities=prob_map,
-            regression_model_used=self._metrics.get("selected_regression_model", "unknown"),
+            regression_model_used=RegressionModel(self._metrics["selected_regression_model"]),
+            classification_model_used=ClassificationModel(
+                self._metrics["selected_classification_model"]
+            ),
         )
 
