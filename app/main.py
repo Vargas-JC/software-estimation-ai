@@ -1,67 +1,31 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 import uvicorn
 
-from app.config import HOST, PORT
-from app.ml.predictor import RiskPredictor
-from app.schemas import (
-    AllocationOptimizeRequest,
-    AllocationOptimizeResponse,
-    RiskPredictionRequest,
-    RiskPredictionResponse,
-)
-from app.search.algorithms import run_search
-from app.search.problem import AllocationProblem
-
-predictor = RiskPredictor()
+from app.api.v1.health import router as health_router
+from app.api.v1.router import api_v1_router
+from app.core.config import DOCS_URL, HOST, IS_PROD, PORT, REDOC_URL
+from app.core.exceptions import register_exception_handlers
+from app.services import risk_service
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    predictor.load()
+    risk_service.load_models()
     yield
 
 
-app = FastAPI(title="InScope AI Service", version="1.0.0", lifespan=lifespan)
-
-
-@app.get("/health")
-def health() -> dict:
-    return {"status": "ok", "models_loaded": predictor.is_loaded}
-
-
-@app.post("/api/v1/risk/predict", response_model=RiskPredictionResponse)
-def predict_risk(request: RiskPredictionRequest) -> RiskPredictionResponse:
-    return predictor.predict(request)
-
-
-@app.post("/api/v1/allocation/optimize", response_model=AllocationOptimizeResponse)
-def optimize_allocation(request: AllocationOptimizeRequest) -> AllocationOptimizeResponse:
-    problem = AllocationProblem(
-        tasks=request.tasks,
-        profiles=request.profiles,
-        max_hours_per_profile=request.max_hours_per_profile,
-    )
-    try:
-        result = run_search(problem, request.algorithm)
-    except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
-
-    return AllocationOptimizeResponse(
-        algorithm=request.algorithm,
-        assignments=result.assignments,
-        total_cost=result.total_cost,
-        nodes_explored=result.nodes_explored,
-        execution_time_ms=result.execution_time_ms,
-        optimal_guaranteed=result.optimal_guaranteed,
-    )
-
-
-@app.get("/api/v1/models/metrics")
-def get_model_metrics() -> dict:
-    return predictor.get_metrics()
+app = FastAPI(
+    title="InScope AI Service",
+    version="1.0.0",
+    docs_url=DOCS_URL,
+    redoc_url=REDOC_URL,
+    lifespan=lifespan,
+)
+register_exception_handlers(app)
+app.include_router(health_router)
+app.include_router(api_v1_router)
 
 
 if __name__ == "__main__":
-    uvicorn.run("app.main:app", host=HOST, port=PORT)
-
+    uvicorn.run("app.main:app", host=HOST, port=PORT, reload=not IS_PROD)
